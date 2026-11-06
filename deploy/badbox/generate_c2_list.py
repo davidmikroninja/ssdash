@@ -44,8 +44,18 @@ EXIT_NO_ADDRESSES = 2
 EXIT_STALE = 3
 
 
-def c2_addresses(db_path: Path, days: int, issues: tuple[str, ...]) -> dict[str, int]:
-    """Return {dst_ip: hit_count} for matching sinkhole events in the window."""
+def c2_addresses(
+    db_path: Path,
+    days: int,
+    issues: tuple[str, ...] = DEFAULT_ISSUES,
+    report_types: tuple[str, ...] | None = None,
+) -> dict[str, int]:
+    """Return {dst_ip: hit_count} for matching sinkhole events in the window.
+
+    By default the filter is on malware family (issues). Pass report_types to
+    filter on report type instead -- ("sinkhole",) takes every family
+    Shadowserver reports through its sinkholes.
+    """
     # Report dates are Shadowserver's, i.e. UTC. Compare against UTC, not the
     # local date: on a host east of UTC the two differ by a day and the
     # staleness check would silently tighten or loosen depending on where the
@@ -55,7 +65,7 @@ def c2_addresses(db_path: Path, days: int, issues: tuple[str, ...]) -> dict[str,
     db.row_factory = sqlite3.Row
     try:
         rows = db.execute(
-            "SELECT issue, detail, report_date FROM findings WHERE report_date >= ?",
+            "SELECT report_type, issue, detail, report_date FROM findings WHERE report_date >= ?",
             (cutoff,),
         ).fetchall()
     finally:
@@ -63,8 +73,10 @@ def c2_addresses(db_path: Path, days: int, issues: tuple[str, ...]) -> dict[str,
 
     counts: dict[str, int] = {}
     for row in rows:
-        issue = (row["issue"] or "").lower()
-        if not any(key in issue for key in issues):
+        if report_types is not None:
+            if not any(k in (row["report_type"] or "").lower() for k in report_types):
+                continue
+        elif not any(key in (row["issue"] or "").lower() for key in issues):
             continue
         try:
             detail = json.loads(row["detail"] or "{}")
@@ -123,6 +135,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--days", type=int, default=LOOKBACK_DAYS)
     ap.add_argument("--issues", default=",".join(DEFAULT_ISSUES),
                     help="comma-separated issue substrings to include")
+    ap.add_argument("--report-types", default="",
+                    help="comma-separated report_type substrings; when set, "
+                         "--issues is ignored (e.g. 'sinkhole' for every family)")
     ap.add_argument("--max-staleness-days", type=int, default=MAX_STALENESS_DAYS,
                     help="refuse if the newest report is older than this")
     args = ap.parse_args(argv)
@@ -149,7 +164,10 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_STALE
 
     issues = tuple(i.strip().lower() for i in args.issues.split(",") if i.strip())
-    addresses = c2_addresses(db_path, args.days, issues)
+    report_types = tuple(
+        i.strip().lower() for i in args.report_types.split(",") if i.strip()
+    ) or None
+    addresses = c2_addresses(db_path, args.days, issues, report_types)
 
     if not addresses:
         print(
