@@ -46,7 +46,7 @@ def build(store, out_path, label="Shadowserver", history_days=90, severity_overr
     html = TEMPLATE.read_text(encoding="utf-8").replace("__DATA__", blob)
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    # Unique temp name: the hourly cron build and an admin-triggered rebuild
+    # Unique temp name: the hourly cron build and a manual rebuild
     # can run at the same time, and a fixed .tmp path would let them corrupt
     # each other's output.
     tmp = out.with_name(f".{out.name}.{uuid.uuid4().hex}.tmp")

@@ -1,7 +1,8 @@
 # BadBox / Vo1d containment
 
 Firewall tooling for RouterOS 7 access routers, fed from the Shadowserver
-ingest in this repository.
+ingest in this repository. For the full deployment walkthrough and tuning
+reference, see the [operator manual](../../docs/manual.md#12-badbox-containment).
 
 ## Why it is not a port list
 

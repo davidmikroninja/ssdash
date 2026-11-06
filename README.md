@@ -13,6 +13,13 @@ Everything is environment-neutral: point it at your own report set, mailbox,
 output path, and list URL. No customer data or deployment details are
 included.
 
+## Documentation
+
+- **[Operator manual](docs/manual.md)** — installation, full configuration
+  reference, dashboard guide, BadBox deployment, troubleshooting.
+- [ssdash README](ssdash/README.md) — concise ingest/dashboard overview.
+- [BadBox README](deploy/badbox/README.md) — concise RouterOS overview.
+
 ## Requirements
 
 - Python 3.11 or later. The dashboard and BadBox generator use only the
@@ -57,6 +64,7 @@ a RouterOS import that replaces `Dynamic_BadBox_C2` with the current BadBox
 
 ```
 config/shadowserver.example.toml   configuration template
+docs/manual.md                     full operator manual
 ssdash/                            report ingest, SQLite store, dashboard
 deploy/badbox/                     RouterOS C2-list generator and firewall rules
 ```

@@ -5,6 +5,9 @@ Reports API, an IMAP mailbox, or a local folder — and publishes a single
 self-contained HTML dashboard. Nothing is probed: every finding comes from
 Shadowserver's own scans.
 
+For installation, the full configuration reference, dashboard operation and
+troubleshooting, see the [operator manual](../docs/manual.md).
+
 - **Management:** severity tiles, actionable-events trend, counts by report type.
 - **NOC:** an action list with one row per IP and issue, worst first, showing first and last
   seen and New / Ongoing / Not in latest report status. Clicking a row shows what to do and
