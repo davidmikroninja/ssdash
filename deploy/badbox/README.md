@@ -11,10 +11,17 @@ sinkhole only records what reaches its own listeners, so **the feed is
 structurally blind to whichever port the bot rotates to next**. There is no
 data source here that could tell you which port to add tomorrow.
 
+The addresses come from Shadowserver's sinkhole, not from the botnets' real
+C2 infrastructure — the real C2 is unreachable by construction. The list is
+therefore a **detection tripwire**: a device talking to a sinkholed address
+is infected. The mitigation is the RouterOS quarantine keyed off that list.
+
 This tooling stops keying on the port:
 
 - **Destination addresses** (`Dynamic_BadBox_C2`) — rebuilt hourly from the
-  `dst_ip` field of BadBox/Vo1d sinkhole events, port-agnostic.
+  `dst_ip` field of sinkhole events, port-agnostic. By default it covers
+  BadBox and Vo1d; see [Broader sinkhole coverage](#broader-sinkhole-coverage)
+  to include every sinkholed family.
 - **The CPE itself** (`BadBox_Quarantine`) — any CPE that opens a TCP
   connection to a known C2 is labelled for 12h and dropped. TCP only: the
   C2 is HTTP over TCP, so ICMP and UDP cannot trigger a false positive
@@ -52,6 +59,28 @@ is true when the list is absent, which is what lets the first detection fire.
 
 To inspect it: `/ip firewall address-list print where list="BadBox_Quarantine"`.
 
+## Broader sinkhole coverage
+
+By default the generator filters on malware family: events whose `issue`
+contains `badbox` or `vo1d`. That default is unchanged.
+
+Pass `--report-types sinkhole` to filter on report type instead. This covers
+every family Shadowserver reports through its sinkholes — badbox2, vo1d,
+`avalanche-*`, sality, ipidea, and anything else that appears in a sinkhole
+report:
+
+```sh
+.venv/bin/python deploy/badbox/generate_c2_list.py \
+  --db data/shadowserver/shadowserver.db \
+  --out /srv/lists/YOUR-LIST-TOKEN/badbox_c2.rsc \
+  --report-types sinkhole
+```
+
+`--report-types` accepts comma-separated report-type substrings, so
+`sinkhole` matches both `event_sinkhole` and `event_sinkhole_http`. When it
+is set, `--issues` is ignored. The router-side quarantine then applies to
+devices infected with any sinkholed family, not just BadBox.
+
 ## Files
 
 | Path | What |
@@ -78,6 +107,9 @@ sudo install -d -o "$USER" -g "$(id -gn)" -m 755 /srv/lists/YOUR-LIST-TOKEN
 
 # 3. Serve /srv/lists over HTTPS, with the tokenised path left unauthenticated.
 ```
+
+Add `--report-types sinkhole` to step 2 to cover every sinkholed family
+rather than only BadBox/Vo1d; the default is unchanged.
 
 Cron, alongside the hourly `ssdash run`:
 

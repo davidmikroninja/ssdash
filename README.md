@@ -26,6 +26,31 @@ included.
   standard library; `openpyxl` is optional, for `.xlsx` customer sheets.
 - RouterOS 7.x for the BadBox firewall scripts.
 
+## Getting Shadowserver access
+
+Shadowserver provides reports free to network owners and national CSIRTs for
+the networks they control. ssdash does not create or bypass that access; you
+need a subscription first.
+
+1. Read the [network reporting overview](https://www.shadowserver.org/what-we-do/network-reporting/)
+   and submit the [Subscribe to Reports](https://www.shadowserver.org/what-we-do/network-reporting/get-reports/)
+   form with the ASNs or CIDRs you control, report recipients, and whois
+   references. An ASN is accepted only if you control it completely; if you
+   hold part of an ISP's ASN, list the CIDRs or domains instead.
+2. Request API access in the form's References section, or later through the
+   [contact form](https://www.shadowserver.org/contact/). Email delivery is
+   the default; the API is recommended for automation.
+3. Shadowserver vets the request and issues the API key and secret. Put them
+   in `[api] key` and `[api] secret` in `config/shadowserver.toml`, then run
+   `apitest`.
+4. If you receive reports by email instead, configure `[imap]` in the same
+   file.
+
+See [Shadowserver's API documentation](https://www.shadowserver.org/what-we-do/network-reporting/api-documentation/)
+and the [API utils wiki](https://github.com/The-Shadowserver-Foundation/api_utils/wiki)
+for API details, or the [manual's access section](docs/manual.md#getting-shadowserver-access)
+for how this repository uses the credentials.
+
 ## Quick start
 
 ```sh
@@ -45,8 +70,13 @@ mapping, and severity overrides.
 ## BadBox containment
 
 `deploy/badbox/generate_c2_list.py` reads the same SQLite database and writes
-a RouterOS import that replaces `Dynamic_BadBox_C2` with the current BadBox
-/Vo1d C2 addresses. `access-router.rsc` installs the detection and drop rules;
+a RouterOS import that replaces `Dynamic_BadBox_C2` with current sinkhole
+addresses. By default it covers BadBox and Vo1d; `--report-types sinkhole`
+broadens it to every family Shadowserver sinks (badbox2, vo1d,
+`avalanche-*`, sality, ipidea). The addresses are Shadowserver's sinkholes,
+not the botnets' real C2 — the real C2 is unreachable by construction — so
+the list is a detection tripwire, and the router-side quarantine is the
+mitigation. `access-router.rsc` installs the detection and drop rules;
 `refresh.rsc` fetches and imports the list hourly. See
 [`deploy/badbox/README.md`](deploy/badbox/README.md) for the full setup.
 

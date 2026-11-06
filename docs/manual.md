@@ -14,6 +14,8 @@ Unless a step says otherwise, run commands from the repository root so the
 
 ## Contents
 
+- [Getting Shadowserver access](#getting-shadowserver-access)
+
 1. [Architecture](#1-architecture)
 2. [Requirements](#2-requirements)
 3. [Installation](#3-installation)
@@ -30,6 +32,54 @@ Unless a step says otherwise, run commands from the repository root so the
 14. [Security hardening](#14-security-hardening)
 15. [Command reference](#15-command-reference)
 16. [File layout](#16-file-layout)
+
+---
+
+## Getting Shadowserver access
+
+ssdash consumes reports that Shadowserver provides free to network owners
+and national CSIRTs for the networks they control. The subscription and API
+credentials come from Shadowserver; this repository does not create or
+bypass them.
+
+1. **Check the scope.** Read the
+   [network reporting overview](https://www.shadowserver.org/what-we-do/network-reporting/).
+   Reports are for your own network or constituency. You can list ASNs you
+   control completely, CIDR blocks, domain space, or — for a national CSIRT —
+   the country you represent. An ISP's ASN is not accepted unless you are
+   that ISP or list only your allocation.
+2. **Subscribe.** Complete the
+   [Subscribe to Reports](https://www.shadowserver.org/what-we-do/network-reporting/get-reports/)
+   form with:
+   - your name, organisation, role, email and phone number;
+   - the ASNs or CIDRs you control;
+   - the report recipient address(es);
+   - references — ideally people listed in whois for the network space.
+3. **Request API access.** In the form's References section, ask for API
+   access. If you have already subscribed, use the
+   [contact form](https://www.shadowserver.org/contact/) and request it.
+   Shadowserver delivers reports by email by default; the API is recommended
+   for automation.
+4. **Receive credentials.** Shadowserver vets the request and follows up,
+   possibly with questions. Once approved it issues the API key and secret,
+   scoped to your subscribed network. Do not share them or commit
+   `config/shadowserver.toml`.
+5. **Configure ssdash.** Put the key and secret in `[api]` (`key` and
+   `secret`), optionally limit the report sets with `reports`, then run:
+
+   ```sh
+   .venv/bin/python -m ssdash -c config/shadowserver.toml apitest
+   ```
+
+   If you receive reports by email instead of the API, configure `[imap]`;
+   `run` will collect from the mailbox.
+
+Official references: [Shadowserver](https://www.shadowserver.org/),
+[network reporting](https://www.shadowserver.org/what-we-do/network-reporting/),
+[Subscribe to Reports](https://www.shadowserver.org/what-we-do/network-reporting/get-reports/),
+[API documentation](https://www.shadowserver.org/what-we-do/network-reporting/api-documentation/),
+[API utils wiki](https://github.com/The-Shadowserver-Foundation/api_utils/wiki),
+and the [contact form](https://www.shadowserver.org/contact/).
 
 ---
 
@@ -143,7 +193,9 @@ deployment.
 
 The API collector asks for the last 3 days of reports on each run and
 downloads new files from `https://dl.shadowserver.org/`. It signs requests
-with HMAC-SHA256 in the `HMAC2` header.
+with HMAC-SHA256 in the `HMAC2` header. See
+[Getting Shadowserver access](#getting-shadowserver-access) for how to
+obtain the key and secret.
 
 ### 4.3 `[imap]` — mailbox collector
 
@@ -162,6 +214,8 @@ The collector reads **unseen** mail from the configured sender, saves the
 attached `.csv`/`.zip`, and marks a message seen only when at least one CSV
 was saved. If there is no attachment it tries the `dl.shadowserver.org` link
 in the body. A message with neither is left unseen for a human to inspect.
+Email delivery is the default if you do not request API access; see
+[Getting Shadowserver access](#getting-shadowserver-access).
 
 ### 4.4 `[folder]` — manual inbox
 
@@ -673,6 +727,11 @@ Delete `data/shadowserver.old` once the rebuilt dashboard looks correct.
 BadBox and Vo1d are malware families that turn consumer CPEs into bots. This
 tooling does not try to block a fixed set of ports. It works from two lists:
 
+The destination addresses are Shadowserver's sinkholes, not the botnets'
+real C2 infrastructure — the real C2 is unreachable by construction. The
+list is therefore a **detection tripwire**: a device talking to a sinkholed
+address is infected. The router-side quarantine is the mitigation.
+
 | List | Populated by | Lifespan |
 |---|---|---|
 | `Dynamic_BadBox_C2` | the generator, from Shadowserver `dst_ip` values | replaced wholesale each run |
@@ -685,13 +744,13 @@ rotation of ports, domains and C2 addresses.
 ### 12.2 Prerequisites
 
 - ssdash is ingesting reports into `data/shadowserver/shadowserver.db`.
-- The database contains BadBox or Vo1d sinkhole events. Check:
+- The database contains sinkhole events (BadBox/Vo1d by default, or any
+  family with `--report-types sinkhole`). Check:
 
   ```sh
   sqlite3 data/shadowserver/shadowserver.db \
     "SELECT DISTINCT issue, report_type FROM findings
-     WHERE lower(issue) LIKE '%badbox%' OR lower(issue) LIKE '%vo1d%'
-     ORDER BY 1;"
+     WHERE report_type LIKE '%sinkhole%' ORDER BY 1;"
   ```
 
 - A web server can publish a directory over HTTPS.
@@ -713,13 +772,19 @@ Options:
 |---|---|---|
 | `--db` | `data/shadowserver/shadowserver.db` | ssdash SQLite database |
 | `--out` | **required** | Destination `.rsc` file |
-| `--days` | `7` | Lookback window for C2 events |
+| `--days` | `7` | Lookback window for sinkhole events |
 | `--issues` | `badbox,vo1d` | Comma-separated issue substrings to include |
+| `--report-types` | none | Comma-separated report-type substrings; when set, `--issues` is ignored (for example `sinkhole`) |
 | `--max-staleness-days` | `2` | Refuse if the newest report is older than this |
 
-The generator reads `findings` rows in the lookback window whose `issue`
-contains one of the configured substrings, extracts `dst_ip` from each row's
-`detail` JSON, and counts hits per address. It writes:
+By default the generator selects rows whose `issue` contains one of the
+`--issues` substrings. Pass `--report-types` to select on `report_type`
+instead: `sinkhole` matches both `event_sinkhole` and `event_sinkhole_http`
+and covers every family Shadowserver sinks (badbox2, vo1d, `avalanche-*`,
+sality, ipidea). `--issues` is ignored when `--report-types` is set.
+
+The generator then extracts `dst_ip` from each selected row's `detail` JSON
+and counts hits per address. It writes:
 
 ```
 # Generated 2026-11-06T08:17:55Z from Shadowserver data through 2026-11-05.
@@ -861,6 +926,7 @@ Inspect the quarantine list after a detection:
 | Block only the bot, keep the customer online | Delete rule 3; rule 2 still blocks C2, and the CPE remains labelled |
 | Different interface scope | Replace `in-interface-list=LAN` in all three rules |
 | Different malware families | `--issues` (comma-separated substrings) |
+| Every sinkholed family | `--report-types sinkhole` (ignores `--issues`) |
 | Longer/shorter C2 history | `--days` |
 | Staleness tolerance | `--max-staleness-days` |
 | List name | Constant `LIST_NAME` in `generate_c2_list.py` and the address-list names in `access-router.rsc`; change all together |

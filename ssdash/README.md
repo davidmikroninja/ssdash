@@ -41,6 +41,11 @@ The dashboard uses only the Python standard library (Python 3.11 or later;
 
 ## Setup
 
+You need a Shadowserver subscription and API credentials before the API
+source will work; see
+[Getting Shadowserver access](../docs/manual.md#getting-shadowserver-access).
+The folder source works without either.
+
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt        # openpyxl, only for .xlsx customer sheets
