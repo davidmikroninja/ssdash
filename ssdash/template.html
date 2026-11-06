@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shadowserver Summary</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --surface-2: #f3f2ee;
+  --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --accent: #2a78d6;
+  --sev-critical: #d03b3b; --sev-high: #ec835a; --sev-medium: #fab219;
+  --sev-low: #6da7ec; --sev-info: #c3c2b7;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --accent: #3987e5; --sev-low: #5598e7; --sev-info: #5e5d58;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+  --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --accent: #3987e5; --sev-low: #5598e7; --sev-info: #5e5d58;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 64px; }
+header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0 0 12px; }
+.sub { color: var(--ink-2); font-size: 13px; }
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.seg button { border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--border); }
+.btn { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--ink); text-decoration: none; display: inline-block; }
+.btn:hover { border-color: var(--accent); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; min-width: 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile .label { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.tile .value { font-size: 30px; font-weight: 650; margin-top: 4px; }
+.tile .note { color: var(--muted); font-size: 12px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; margin-bottom: 16px; align-items: start; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.sev { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; text-transform: capitalize; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+.scroll { overflow-x: auto; }
+tr.grp { cursor: pointer; }
+tr.grp:hover td { background: var(--surface-2); }
+tr.expand td { background: var(--surface-2); }
+.pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); white-space: nowrap; }
+.pill.new { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.small { font-size: 12px; color: var(--ink-2); }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin-top: 8px; }
+.kv div:nth-child(odd) { color: var(--muted); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
+select, input[type=search] { font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+#tip { position: fixed; pointer-events: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); display: none; z-index: 10; min-width: 140px; }
+#tip .row { display: flex; justify-content: space-between; gap: 12px; }
+details > summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+section { margin-bottom: 16px; }
+.empty { color: var(--muted); padding: 16px 0; }
+.warn { color: var(--sev-critical); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Shadowserver summary</h1>
+      <div class="sub" id="subtitle"></div>
+    </div>
+    <div class="seg" role="group" aria-label="Period" id="period">
+      <button data-p="latest">Latest day</button>
+      <button data-p="7">7 days</button>
+      <button data-p="30">30 days</button>
+      <button data-p="all">All</button>
+    </div>
+    <a class="btn" href="/settings/">Settings</a>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Actionable events per report day</h2>
+      <div class="legend" id="trend-legend"></div>
+      <div id="trend"></div>
+    </div>
+    <div class="card">
+      <h2>By report type</h2>
+      <div class="scroll"><table id="types"></table></div>
+    </div>
+  </div>
+
+  <section class="card" id="cust-card" hidden>
+    <h2>Customers affected <span class="small">· actionable issues only · click a customer to filter the action list</span></h2>
+    <div class="scroll"><table id="customers"></table></div>
+  </section>
+
+  <section class="card">
+    <h2>Action list <span class="small">· one row per IP and issue, worst first · click a row for detail and fix</span></h2>
+    <div class="filters">
+      <select id="f-sev" aria-label="Minimum severity">
+        <option value="low">Low and above</option>
+        <option value="medium">Medium and above</option>
+        <option value="high">High and above</option>
+        <option value="critical">Critical only</option>
+        <option value="info">Everything incl. info</option>
+      </select>
+      <select id="f-cat" aria-label="Category"><option value="">All categories</option></select>
+      <input type="search" id="f-q" placeholder="Filter IP, customer, host, issue…" aria-label="Search">
+      <span class="small" id="f-count"></span>
+    </div>
+    <div class="scroll"><table id="actions"></table></div>
+  </section>
+
+  <section class="card">
+    <details id="inv">
+      <summary>Inventory (informational reports)</summary>
+      <p class="small">Not vulnerabilities on their own: what Shadowserver can see on your network. Useful for spotting devices that shouldn't be visible.</p>
+      <div class="scroll"><table id="inventory"></table></div>
+    </details>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>Ingestion log</summary>
+      <p class="small">Every report file loaded. "Expected" comes from the email's event count when available; a mismatch is flagged.</p>
+      <div class="scroll"><table id="files"></table></div>
+    </details>
+  </section>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(() => {
+const D = JSON.parse(document.getElementById('data').textContent);
+const SEV = ['critical', 'high', 'medium', 'low', 'info'];
+const RANK = Object.fromEntries(SEV.map((s, i) => [s, i]));
+const CAT_ORDER = D.categories;
+const INVENTORY = CAT_ORDER[CAT_ORDER.length - 1];
+
+// --- helpers -------------------------------------------------------------
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null) el.append(k instanceof Node ? k : document.createTextNode(String(k)));
+  return el;
+}
+const NO_CUST = {blank: 'Blank in IP sheet', missing: 'Not in IP sheet'};
+const custLabel = r => r.customer || NO_CUST[r.cust_state] || 'Not in IP sheet';
+const sevBadge = s => h('span', {class: 'sev'}, h('span', {class: 'dot', style: `background:var(--sev-${s})`}), s);
+const fmtDate = d => d;
+const addDays = (d, n) => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+const typeInfo = t => D.types[t] || {title: t, category: '', guidance: ''};
+
+const F = D.findings;
+const allDates = [...new Set(F.map(f => f.report_date))].sort();
+const maxDate = allDates[allDates.length - 1] || '';
+const minDate = allDates[0] || '';
+// latest report date per base type (to tell "still present" from "not in latest report")
+const latestByType = {};
+for (const f of F) if (!latestByType[f.base_type] || f.report_date > latestByType[f.base_type]) latestByType[f.base_type] = f.report_date;
+
+let period = (() => { try { return localStorage.getItem('ssdash.period') || '7'; } catch { return '7'; } })();
+
+function periodStart() {
+  if (period === 'latest') return maxDate;
+  if (period === 'all') return minDate;
+  return addDays(maxDate, -(parseInt(period) - 1));
+}
+
+// --- grouping: one row per IP + base type + issue -------------------------
+function groups(rows) {
+  const g = new Map();
+  for (const f of rows) {
+    const key = f.ip + '|' + f.base_type + '|' + f.issue;
+    let r = g.get(key);
+    if (!r) g.set(key, r = {key, ip: f.ip, hostname: f.hostname, base_type: f.base_type, issue: f.issue,
+      category: f.category, severity: f.severity, customer: f.customer || '', cust_state: f.cust_state, cust_info: f.cust_info, ports: new Set(), dates: new Set(), events: 0, last: f, types: new Set()});
+    r.events++;
+    r.dates.add(f.report_date);
+    r.types.add(f.report_type);
+    if (f.port) r.ports.add(f.port);
+    if (f.hostname && !r.hostname) r.hostname = f.hostname;
+    if (RANK[f.severity] < RANK[r.severity]) r.severity = f.severity;
+    if ((f.report_date + f.ts) > (r.last.report_date + r.last.ts)) r.last = f;
+  }
+  return [...g.values()];
+}
+// history across ALL data, for first-seen / status
+const history = new Map(groups(F).map(r => [r.key, r]));
+
+// --- render ----------------------------------------------------------------
+function render() {
+  document.querySelectorAll('#period button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === period));
+  const start = periodStart();
+  const rows = F.filter(f => f.report_date >= start);
+  const G = groups(rows);
+  for (const r of G) {
+    const hst = history.get(r.key);
+    r.first = [...hst.dates].sort()[0];
+    r.lastSeen = [...hst.dates].sort().pop();
+    r.isNew = r.first >= start;
+    r.stillPresent = r.lastSeen >= latestByType[r.base_type];
+  }
+
+  document.getElementById('subtitle').textContent =
+    `${D.label} · reports ${start === maxDate ? maxDate : start + ' to ' + maxDate} · generated ${D.generated}`;
+
+  renderTiles(rows, G);
+  renderTrend(rows, start);
+  renderTypes(rows, G);
+  renderCustomers(G);
+  renderActions(G);
+  renderInventory(G);
+}
+
+function renderTiles(rows, G) {
+  const el = document.getElementById('tiles'); el.replaceChildren();
+  for (const s of SEV) {
+    const issues = G.filter(r => r.severity === s).length;
+    const events = rows.filter(f => f.severity === s).length;
+    el.append(h('div', {class: 'card tile'},
+      h('div', {class: 'label'}, h('span', {class: 'dot', style: `background:var(--sev-${s})`}), s),
+      h('div', {class: 'value'}, issues),
+      h('div', {class: 'note'}, `${issues === 1 ? 'issue' : 'issues'} · ${events} ${events === 1 ? 'event' : 'events'}`)));
+  }
+  const act = G.filter(r => r.severity !== 'info');
+  el.append(h('div', {class: 'card tile'},
+    h('div', {class: 'label'}, 'IPs needing action'),
+    h('div', {class: 'value'}, new Set(act.map(r => r.ip)).size),
+    h('div', {class: 'note'}, (n => `${n} new ${n === 1 ? 'issue' : 'issues'} this period`)(act.filter(r => r.isNew).length))));
+}
+
+function renderTrend(rows, start) {
+  const leg = document.getElementById('trend-legend'); leg.replaceChildren();
+  const ser = ['critical', 'high', 'medium', 'low'];
+  for (const s of ser) leg.append(h('span', {}, h('span', {class: 'dot', style: `background:var(--sev-${s})`}), s));
+  const days = []; for (let d = start; d <= maxDate; d = addDays(d, 1)) days.push(d);
+  const byDay = Object.fromEntries(days.map(d => [d, Object.fromEntries(ser.map(s => [s, 0]))]));
+  for (const f of rows) if (f.severity !== 'info' && byDay[f.report_date]) byDay[f.report_date][f.severity]++;
+  const totals = days.map(d => ser.reduce((a, s) => a + byDay[d][s], 0));
+  const max = Math.max(1, ...totals);
+  const nice = (() => { const p = Math.pow(10, Math.floor(Math.log10(max))); for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= max) return m * p; })();
+
+  const W = 560, H = 220, L = 32, B = 24, T = 8, R = 8;
+  const pw = W - L - R, ph = H - T - B;
+  const slot = pw / days.length, bw = Math.max(3, Math.min(28, slot * 0.6));
+  const NS = 'http://www.w3.org/2000/svg';
+  const s = (tag, a) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const svg = s('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': 'Actionable events per report day by severity'});
+  for (let i = 0; i <= 4; i++) {
+    const v = nice * i / 4, y = T + ph - ph * v / nice;
+    svg.append(s('line', {x1: L, x2: W - R, y1: y, y2: y, stroke: i ? 'var(--grid)' : 'var(--axis)', 'stroke-width': 1}));
+    const t = s('text', {x: L - 6, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)'}); t.textContent = Number.isInteger(v) ? v : v.toFixed(1); svg.append(t);
+  }
+  const step = Math.ceil(days.length / 7);
+  days.forEach((d, i) => {
+    const x = L + slot * i + slot / 2;
+    let y = T + ph;
+    const stack = ser.filter(sv => byDay[d][sv] > 0);
+    stack.forEach((sv, j) => {
+      const hgt = ph * byDay[d][sv] / nice;
+      const top = j === stack.length - 1;
+      const gap = j ? 2 : 0;
+      const rect = top
+        ? s('path', {d: roundTop(x - bw / 2, y - hgt, bw, Math.max(0, hgt - gap), Math.min(4, bw / 2, hgt)), fill: `var(--sev-${sv})`})
+        : s('rect', {x: x - bw / 2, y: y - hgt, width: bw, height: Math.max(0, hgt - gap), fill: `var(--sev-${sv})`});
+      svg.append(rect); y -= hgt;
+    });
+    if (i % step === 0 || i === days.length - 1) {
+      const t = s('text', {x, y: H - 6, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--muted)'}); t.textContent = d.slice(5); svg.append(t);
+    }
+    const hit = s('rect', {x: L + slot * i, y: T, width: slot, height: ph, fill: 'transparent'});
+    hit.addEventListener('mousemove', e => tip(e, d, ser.map(sv => [sv, byDay[d][sv]]), totals[i]));
+    hit.addEventListener('mouseleave', () => tipEl.style.display = 'none');
+    svg.append(hit);
+  });
+  const box = document.getElementById('trend'); box.replaceChildren(svg);
+  if (!totals.some(Boolean)) box.append(h('div', {class: 'empty'}, 'No actionable events in this period.'));
+}
+function roundTop(x, y, w, hgt, r) {
+  return `M${x},${y + hgt}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + hgt}Z`;
+}
+const tipEl = document.getElementById('tip');
+function tip(e, d, pairs, total) {
+  tipEl.replaceChildren(h('div', {style: 'font-weight:600;margin-bottom:4px'}, d),
+    ...pairs.map(([s, n]) => h('div', {class: 'row'}, sevBadge(s), h('span', {class: 'mono'}, n))),
+    h('div', {class: 'row', style: 'border-top:1px solid var(--grid);margin-top:4px;padding-top:4px'}, 'Total', h('span', {class: 'mono'}, total)));
+  tipEl.style.display = 'block';
+  const x = Math.min(e.clientX + 14, innerWidth - tipEl.offsetWidth - 8);
+  tipEl.style.left = x + 'px'; tipEl.style.top = (e.clientY + 14) + 'px';
+}
+
+function renderTypes(rows, G) {
+  const by = {};
+  for (const f of rows) {
+    const b = by[f.base_type] ||= {base: f.base_type, cat: f.category, events: 0, ips: new Set(), sev: 'info', last: '', variants: new Set()};
+    b.events++; b.ips.add(f.ip); b.variants.add(f.report_type);
+    if (RANK[f.severity] < RANK[b.sev]) b.sev = f.severity;
+    if (f.report_date > b.last) b.last = f.report_date;
+  }
+  const list = Object.values(by).sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) || RANK[a.sev] - RANK[b.sev] || b.ips.size - a.ips.size);
+  const t = document.getElementById('types');
+  t.replaceChildren(h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Worst'), h('th', {class: 'num'}, 'IPs'), h('th', {class: 'num'}, 'Events'), h('th', {}, 'Last report'))));
+  const tb = h('tbody');
+  let cat = null;
+  for (const b of list) {
+    if (b.cat !== cat) { cat = b.cat; tb.append(h('tr', {}, h('td', {colspan: 5, class: 'small', style: 'font-weight:600;padding-top:14px'}, cat))); }
+    tb.append(h('tr', {},
+      h('td', {}, typeInfo(b.base).title, h('div', {class: 'small mono'}, [...b.variants].sort().join(', '))),
+      h('td', {}, sevBadge(b.sev)),
+      h('td', {class: 'num'}, b.ips.size), h('td', {class: 'num'}, b.events), h('td', {class: 'mono'}, b.last)));
+  }
+  if (!list.length) tb.append(h('tr', {}, h('td', {colspan: 5, class: 'empty'}, 'No reports in this period.')));
+  t.append(tb);
+}
+
+function renderCustomers(G) {
+  const card = document.getElementById('cust-card');
+  card.hidden = !D.has_customers;
+  if (!D.has_customers) return;
+  const by = {};
+  for (const r of G.filter(r => r.severity !== 'info')) {
+    const k = r.customer || ('\u0000' + r.cust_state);
+    const c = by[k] ||= {name: r.customer, label: custLabel(r), ips: new Set(), sev: 'info', issues: {}, isNew: 0};
+    c.ips.add(r.ip); c.issues[r.issue] = (c.issues[r.issue] || 0) + 1;
+    if (RANK[r.severity] < RANK[c.sev]) c.sev = r.severity;
+    if (r.isNew) c.isNew++;
+  }
+  const list = Object.values(by).sort((a, b) => RANK[a.sev] - RANK[b.sev] || b.ips.size - a.ips.size || a.name.localeCompare(b.name));
+  const t = document.getElementById('customers');
+  t.replaceChildren(h('thead', {}, h('tr', {}, h('th', {}, 'Customer'), h('th', {}, 'Worst'), h('th', {class: 'num'}, 'IPs'), h('th', {}, 'Issues'), h('th', {class: 'num'}, 'New'))));
+  const tb = h('tbody');
+  for (const c of list) {
+    const tr = h('tr', {class: 'grp', tabindex: 0},
+      h('td', {}, c.name ? h('span', {style: 'font-weight:600'}, c.name) : h('span', {class: 'warn'}, c.label)),
+      h('td', {}, sevBadge(c.sev)), h('td', {class: 'num'}, c.ips.size),
+      h('td', {class: 'small'}, Object.entries(c.issues).map(([k, n]) => n > 1 ? `${k} ×${n}` : k).join(', ')),
+      h('td', {class: 'num'}, c.isNew || '—'));
+    const go = () => { const q = document.getElementById('f-q'); q.value = c.name || c.label; render(); document.getElementById('actions').scrollIntoView({behavior: 'smooth', block: 'start'}); };
+    tr.addEventListener('click', go);
+    tr.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    tb.append(tr);
+  }
+  if (!list.length) tb.append(h('tr', {}, h('td', {colspan: 5, class: 'empty'}, 'No actionable issues in this period.')));
+  t.append(tb);
+}
+
+let openKey = null;
+function renderActions(G) {
+  const min = document.getElementById('f-sev').value;
+  const cat = document.getElementById('f-cat').value;
+  const q = document.getElementById('f-q').value.trim().toLowerCase();
+  let list = G.filter(r => RANK[r.severity] <= RANK[min] && (!cat || r.category === cat) &&
+    (!q || [r.ip, custLabel(r), r.hostname, r.issue, r.base_type, typeInfo(r.base_type).title].join(' ').toLowerCase().includes(q)));
+  if (min !== 'info') list = list.filter(r => r.category !== INVENTORY || RANK[r.severity] <= RANK[min]);
+  list.sort((a, b) => RANK[a.severity] - RANK[b.severity] || CAT_ORDER.indexOf(a.category) - CAT_ORDER.indexOf(b.category) || b.lastSeen.localeCompare(a.lastSeen) || a.ip.localeCompare(b.ip));
+  document.getElementById('f-count').textContent = `${list.length} ${list.length === 1 ? 'row' : 'rows'} · ${new Set(list.map(r => r.ip)).size} IPs`;
+
+  const t = document.getElementById('actions');
+  t.replaceChildren(h('thead', {}, h('tr', {},
+    ...['Severity', 'IP', D.has_customers ? 'Customer / host' : 'Hostname', 'Issue', 'Report', 'Port', 'Events', 'First seen', 'Last seen', 'Status'].map(c => h('th', {class: c === 'Events' ? 'num' : null}, c)))));
+  const tb = h('tbody');
+  for (const r of list) {
+    const status = r.isNew ? h('span', {class: 'pill new'}, 'New')
+      : r.stillPresent ? h('span', {class: 'pill'}, 'Ongoing') : h('span', {class: 'pill'}, 'Not in latest report');
+    const tr = h('tr', {class: 'grp', tabindex: 0, 'aria-expanded': openKey === r.key},
+      h('td', {}, sevBadge(r.severity)), h('td', {class: 'mono'}, r.ip), D.has_customers ? h('td', {}, r.customer ? h('div', {style: 'font-weight:600'}, r.customer) : h('div', {class: 'warn small'}, custLabel(r)), r.hostname ? h('div', {class: 'small'}, r.hostname) : null) : h('td', {}, r.hostname || '—'),
+      h('td', {}, r.issue), h('td', {}, typeInfo(r.base_type).title), h('td', {class: 'mono'}, [...r.ports].join(', ') || '—'),
+      h('td', {class: 'num'}, r.events), h('td', {class: 'mono'}, r.first), h('td', {class: 'mono'}, r.lastSeen), h('td', {}, status));
+    const toggle = () => { openKey = openKey === r.key ? null : r.key; renderActions(G); };
+    tr.addEventListener('click', toggle);
+    tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+    tb.append(tr);
+    if (openKey === r.key) {
+      let det = {}; try { det = JSON.parse(r.last.detail || '{}'); } catch {}
+      tb.append(h('tr', {class: 'expand'}, h('td', {colspan: 10},
+        h('div', {}, h('strong', {}, 'What to do: '), typeInfo(r.base_type).guidance),
+        h('div', {class: 'small', style: 'margin-top:6px'}, `Latest event ${r.last.ts} UTC in ${r.last.report_type} · protocol ${r.last.protocol || '—'} · seen on ${r.dates.size} report day(s) this period` + (r.last.sev_original ? ` · Shadowserver rates this ${r.last.sev_original}; raised by local policy` : '')),
+        r.cust_info ? h('div', {class: 'small', style: 'margin-top:6px'}, h('strong', {}, 'IP assignment: '), Object.entries(r.cust_info).map(([k, v]) => k === 'sheet' ? `from tab "${v}"` : `${k}: ${v}`).join(' · ')) : null,
+        h('div', {class: 'kv small mono'}, ...Object.entries(det).flatMap(([k, v]) => [h('div', {}, k), h('div', {}, v)])))));
+    }
+  }
+  if (!list.length) tb.append(h('tr', {}, h('td', {colspan: 10, class: 'empty'}, 'Nothing matches these filters.')));
+  t.append(tb);
+}
+
+function renderInventory(G) {
+  const inv = G.filter(r => r.category === INVENTORY);
+  const by = {};
+  for (const r of inv) (by[r.base_type] ||= []).push(r);
+  const t = document.getElementById('inventory');
+  t.replaceChildren(h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {class: 'num'}, 'IPs'), h('th', {}, 'What was seen'), h('th', {}, 'IPs (first 50)'))));
+  const tb = h('tbody');
+  for (const [b, rs] of Object.entries(by).sort((a, b) => b[1].length - a[1].length)) {
+    const issues = {}; for (const r of rs) issues[r.issue] = (issues[r.issue] || 0) + 1;
+    const ips = [...new Set(rs.map(r => r.ip))];
+    tb.append(h('tr', {}, h('td', {}, typeInfo(b).title, h('div', {class: 'small'}, typeInfo(b).guidance)),
+      h('td', {class: 'num'}, ips.length),
+      h('td', {class: 'small'}, Object.entries(issues).map(([k, n]) => `${k} (${n})`).join(', ')),
+      h('td', {class: 'small mono'}, ips.slice(0, 50).join(', ') + (ips.length > 50 ? ` … +${ips.length - 50}` : ''))));
+  }
+  if (!inv.length) tb.append(h('tr', {}, h('td', {colspan: 4, class: 'empty'}, 'No inventory reports in this period.')));
+  t.append(tb);
+}
+
+function renderFiles() {
+  const t = document.getElementById('files');
+  t.replaceChildren(h('thead', {}, h('tr', {}, ...['Report date', 'File', 'Source', 'Rows', 'Expected', 'Loaded at'].map(c => h('th', {class: ['Rows', 'Expected'].includes(c) ? 'num' : null}, c)))));
+  const tb = h('tbody');
+  for (const f of D.files) {
+    const bad = f.expected_rows != null && f.expected_rows !== f.rows;
+    tb.append(h('tr', {}, h('td', {class: 'mono'}, f.report_date), h('td', {class: 'mono small'}, f.filename), h('td', {}, f.source || '—'),
+      h('td', {class: 'num'}, f.rows), h('td', {class: 'num' + (bad ? ' warn' : '')}, f.expected_rows ?? '—', bad ? ' ⚠' : ''), h('td', {class: 'small mono'}, f.ingested_at)));
+  }
+  t.append(tb);
+}
+
+// --- wire up ---------------------------------------------------------------
+const catSel = document.getElementById('f-cat');
+for (const c of CAT_ORDER) catSel.append(h('option', {value: c}, c));
+document.querySelectorAll('#period button').forEach(b => b.addEventListener('click', () => {
+  period = b.dataset.p; try { localStorage.setItem('ssdash.period', period); } catch {}
+  openKey = null; render();
+}));
+['f-sev', 'f-cat', 'f-q'].forEach(id => document.getElementById(id).addEventListener('input', render));
+renderFiles();
+render();
+})();
+</script>
+</body>
+</html>

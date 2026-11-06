@@ -1,0 +1,3 @@
+# The dashboard and BadBox generator use only the Python standard library.
+# openpyxl is optional: it is only needed when customers_file is .xlsx/.xlsm.
+openpyxl>=3.1

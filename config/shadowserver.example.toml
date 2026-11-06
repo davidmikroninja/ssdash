@@ -1,0 +1,52 @@
+# Copy to config/shadowserver.toml and fill in. Keep shadowserver.toml out of
+# git: it holds API and mailbox credentials.
+
+label = "Shadowserver"
+data_dir = "data/shadowserver"             # SQLite db + raw CSV archive
+output = "public/shadowserver/index.html"  # page to serve (put it behind auth)
+history_days = 90                          # how much history the dashboard carries
+
+# Optional: map IPs to customers from your public IP assignment sheet.
+# The file is read on every build. .csv works as-is; .xlsx needs openpyxl.
+# customers_file = "customers.csv"
+# customers_sheets = ["IPv4", "IPv6"]      # tabs to read (omit to read every tab)
+
+# Tried in order on every run. Use "api" once Shadowserver issues the key;
+# keep "imap" as a fallback, or drop it once the API has proven reliable.
+sources = ["api", "imap", "folder"]
+
+# Raise (never lower) Shadowserver's own rating for report types you care about.
+# Keys are the base type (scan6_/event6_ variants fold onto the same key).
+# Shadowserver rates exposed MikroTik btest/Winbox and open HTTP as "info", so by
+# default they only show under "Everything incl. info" in the action list.
+[severity_overrides]
+scan_mikrotik_service = "medium"   # exposed btest/Winbox is worth fixing
+# scan_http = "low"
+
+[api]
+key = "YOUR-API-KEY"
+secret = "YOUR-API-SECRET"
+uri = "https://transform.shadowserver.org/api2/"
+# reports = ["YOUR-REPORT-SET"]    # optional: limit to specific report sets
+
+[imap]
+host = "imap.example.com"
+port = 993
+ssl = true
+user = "shadowserver@example.com"
+password = "CHANGE-ME"
+folder = "INBOX"
+from_filter = "shadowserver.org"
+# move_to = "Shadowserver/Processed"   # optional: file processed mails away
+
+[folder]
+path = "data/shadowserver/inbox"  # drop .csv / .csv.zip here for manual loads
+
+[digest]
+enabled = false
+smtp_host = "smtp.example.com"
+smtp_port = 25
+starttls = false
+from = "shadowserver-dashboard@example.com"
+to = ["noc@example.com"]
+dashboard_url = "https://shadowserver.example.com/"

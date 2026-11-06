@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Credentials
+config/shadowserver.toml
+
+# Generated/runtime data
+data/
+public/
+*.db
